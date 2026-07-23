@@ -9,7 +9,8 @@ import { ChartsRow } from "@/components/dashboard/Charts";
 import { ControlPanel } from "@/components/dashboard/ControlPanel";
 import { StatusBar } from "@/components/dashboard/StatusBar";
 import { Footer } from "@/components/dashboard/Footer";
-import { useSimulation } from "@/simulation/hooks";
+import { useEffect } from "react";
+import { engine, useSimulation } from "@/simulation/hooks";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -38,6 +39,9 @@ function formatWait(sec: number) {
 
 function Dashboard() {
   const sim = useSimulation();
+  useEffect(() => {
+    if (engine.getSnapshot().status === "idle") engine.start();
+  }, []);
   const predicted = Math.round(sim.activeAgents * 1.17);
 
   return (
