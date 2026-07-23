@@ -1,6 +1,9 @@
 import { motion } from "framer-motion";
 import { AlertTriangle, Brain, ListChecks, TrendingUp, type LucideIcon } from "lucide-react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
+import { useSimulation } from "@/simulation/hooks";
+import { SCENARIOS } from "@/simulation/engine";
 
 interface Section {
   title: string;
@@ -8,45 +11,6 @@ interface Section {
   tone: "destructive" | "warning" | "primary" | "accent";
   items: { title: string; meta: string }[];
 }
-
-const sections: Section[] = [
-  {
-    title: "Congestion Alerts",
-    icon: AlertTriangle,
-    tone: "destructive",
-    items: [
-      { title: "Darshan Queue exceeding 92% capacity", meta: "Sector 4 · 2 min ago" },
-      { title: "Bottleneck detected near Gate B", meta: "Sector 2 · 6 min ago" },
-    ],
-  },
-  {
-    title: "Prediction Summary",
-    icon: Brain,
-    tone: "primary",
-    items: [
-      { title: "+18% inflow expected in next 30 minutes", meta: "Model: TwinNet-v3" },
-      { title: "Peak crowd window: 17:40 – 18:20", meta: "Confidence 94%" },
-    ],
-  },
-  {
-    title: "Recommended Actions",
-    icon: ListChecks,
-    tone: "accent",
-    items: [
-      { title: "Divert inflow via Route R-7 (North Loop)", meta: "ETA relief: 6 min" },
-      { title: "Open auxiliary queue lane Q-3", meta: "Manual approval" },
-    ],
-  },
-  {
-    title: "Upcoming Risk Areas",
-    icon: TrendingUp,
-    tone: "warning",
-    items: [
-      { title: "Prasadam Hall likely to breach threshold", meta: "in ~22 min" },
-      { title: "Exit Gate 3 crowd pressure rising", meta: "in ~35 min" },
-    ],
-  },
-];
 
 const toneMap = {
   destructive: "text-destructive bg-destructive/10 border-destructive/30",
@@ -56,6 +20,66 @@ const toneMap = {
 } as const;
 
 export function AlertsPanel() {
+  const sim = useSimulation();
+
+  const sections = useMemo<Section[]>(() => {
+    const hot = sim.locations
+      .filter((l) => l.load >= 0.75)
+      .sort((a, b) => b.load - a.load);
+    const rising = sim.locations
+      .filter((l) => l.load >= 0.45 && l.load < 0.75)
+      .sort((a, b) => b.load - a.load);
+
+    const congestionItems = hot.length
+      ? hot.slice(0, 2).map((l) => ({
+          title: `${l.label} exceeding ${Math.round(l.load * 100)}% capacity`,
+          meta: `${l.count.toLocaleString()} / ${l.capacity.toLocaleString()} agents`,
+        }))
+      : [{ title: "All zones nominal", meta: "No breaches detected" }];
+
+    const scenario = SCENARIOS[sim.scenario];
+    const predictionItems = [
+      {
+        title: `${sim.activeAgents.toLocaleString()} active · ${sim.exitedAgents.toLocaleString()} exited`,
+        meta: `Scenario: ${sim.scenario} · ${scenario.agentCount.toLocaleString()} total agents`,
+      },
+      {
+        title: `Congestion index ${sim.congestionIndex} / 100 (${sim.congestionLabel})`,
+        meta: `Predicted window: next 30 min`,
+      },
+    ];
+
+    const actionItems = hot.length
+      ? [
+          {
+            title: `Divert inflow away from ${hot[0].label}`,
+            meta: `Open auxiliary route · relief ~6 min`,
+          },
+          {
+            title: `Open additional lanes at ${hot[0].label}`,
+            meta: `Requires manual approval`,
+          },
+        ]
+      : [
+          { title: "Maintain current routing", meta: "No intervention required" },
+          { title: "Monitor Darshan Queue throughput", meta: "Auto-review in 5 min" },
+        ];
+
+    const riskItems = rising.length
+      ? rising.slice(0, 2).map((l) => ({
+          title: `${l.label} approaching threshold`,
+          meta: `${Math.round(l.load * 100)}% load · trending up`,
+        }))
+      : [{ title: "No zones approaching threshold", meta: "Stable inflow" }];
+
+    return [
+      { title: "Congestion Alerts", icon: AlertTriangle, tone: "destructive", items: congestionItems },
+      { title: "Prediction Summary", icon: Brain, tone: "primary", items: predictionItems },
+      { title: "Recommended Actions", icon: ListChecks, tone: "accent", items: actionItems },
+      { title: "Upcoming Risk Areas", icon: TrendingUp, tone: "warning", items: riskItems },
+    ];
+  }, [sim]);
+
   return (
     <div className="flex flex-col gap-4">
       {sections.map((s, si) => (

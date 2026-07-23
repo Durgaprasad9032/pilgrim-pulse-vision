@@ -9,6 +9,7 @@ import { ChartsRow } from "@/components/dashboard/Charts";
 import { ControlPanel } from "@/components/dashboard/ControlPanel";
 import { StatusBar } from "@/components/dashboard/StatusBar";
 import { Footer } from "@/components/dashboard/Footer";
+import { useSimulation } from "@/simulation/hooks";
 
 export const Route = createFileRoute("/")({
   component: Dashboard,
@@ -29,7 +30,16 @@ export const Route = createFileRoute("/")({
   }),
 });
 
+function formatWait(sec: number) {
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  return `${m}m ${String(s).padStart(2, "0")}s`;
+}
+
 function Dashboard() {
+  const sim = useSimulation();
+  const predicted = Math.round(sim.activeAgents * 1.17);
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />
@@ -43,7 +53,7 @@ function Dashboard() {
               icon={Users}
               accent="primary"
               label="Current Crowd"
-              value="42,180"
+              value={sim.activeAgents.toLocaleString()}
               subtitle="Across all zones"
               trend={4.2}
             />
@@ -52,17 +62,17 @@ function Dashboard() {
               icon={Brain}
               accent="accent"
               label="Current Prediction"
-              value="49,600"
+              value={predicted.toLocaleString()}
               subtitle="Next 30 minutes"
               trend={17.6}
             />
             <KpiCard
               index={2}
               icon={Gauge}
-              accent="warning"
+              accent={sim.congestionIndex > 75 ? "destructive" : "warning"}
               label="Congestion Level"
-              value="High"
-              subtitle="72 / 100 index"
+              value={sim.congestionLabel}
+              subtitle={`${sim.congestionIndex} / 100 index`}
               trend={-3.1}
             />
             <KpiCard
@@ -70,7 +80,7 @@ function Dashboard() {
               icon={Clock}
               accent="success"
               label="Avg Waiting Time"
-              value="14m 22s"
+              value={formatWait(sim.waitingSeconds)}
               subtitle="Darshan queue"
               trend={-8.4}
             />
@@ -79,8 +89,8 @@ function Dashboard() {
               icon={Activity}
               accent="destructive"
               label="Active Simulation"
-              value="Weekend"
-              subtitle="Twin ID · TW-3021"
+              value={sim.scenario}
+              subtitle={`Twin ID · TW-3021 · t+${sim.tick}s`}
               trend={0}
             />
           </section>
