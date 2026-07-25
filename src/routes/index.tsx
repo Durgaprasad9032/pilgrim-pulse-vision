@@ -7,6 +7,7 @@ import { TwinMap } from "@/components/dashboard/TwinMap";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { ChartsRow } from "@/components/dashboard/Charts";
 import { ControlPanel } from "@/components/dashboard/ControlPanel";
+import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { StatusBar } from "@/components/dashboard/StatusBar";
 import { Footer } from "@/components/dashboard/Footer";
 import { useEffect } from "react";
@@ -42,7 +43,10 @@ function Dashboard() {
   useEffect(() => {
     if (engine.getSnapshot().status === "idle") engine.start();
   }, []);
-  const predicted = Math.round(sim.activeAgents * 1.17);
+  const pred30 =
+    sim.intelligence.predictions.find((p) => p.horizonMinutes === 30)?.expectedCrowd ??
+    sim.activeAgents;
+  const predConfidence = sim.intelligence.overallConfidence;
 
   return (
     <div className="flex min-h-screen">
@@ -65,9 +69,9 @@ function Dashboard() {
               index={1}
               icon={Brain}
               accent="accent"
-              label="Current Prediction"
-              value={predicted.toLocaleString()}
-              subtitle="Next 30 minutes"
+              label="Crowd Prediction"
+              value={pred30.toLocaleString()}
+              subtitle={`30 min · ${predConfidence} confidence`}
               trend={17.6}
             />
             <KpiCard
@@ -101,6 +105,9 @@ function Dashboard() {
 
           {/* Control */}
           <ControlPanel />
+
+          {/* Command Center */}
+          <CommandCenter />
 
           {/* Map + alerts */}
           <section className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">

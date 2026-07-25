@@ -1,7 +1,8 @@
 import { useEffect, useRef } from "react";
 import { Layers, Maximize2, MapPin, Radio } from "lucide-react";
 import { engine, useSimulation } from "@/simulation/hooks";
-import { LOCATIONS, LOCATION_ORDER } from "@/simulation/engine";
+import { computeDensityGrid, heatColor } from "@/simulation/analytics";
+import { LOCATIONS, MAP_ROUTE_EDGES } from "@/simulation/engine";
 import type { LocationStat } from "@/simulation/types";
 
 const levelColor: Record<LocationStat["level"], string> = {
@@ -43,13 +44,29 @@ function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement | null>)
       const H = rect.height;
       ctx.clearRect(0, 0, W, H);
 
-      // draw path lines between locations
+      // crowd density heatmap (green → yellow → orange → red)
+      const agents = engine.agents;
+      const gridW = 40;
+      const gridH = 30;
+      const density = computeDensityGrid(agents, gridW, gridH);
+      const cellW = W / gridW;
+      const cellH = H / gridH;
+      for (let gy = 0; gy < gridH; gy++) {
+        for (let gx = 0; gx < gridW; gx++) {
+          const v = density[gy * gridW + gx];
+          if (v < 0.08) continue;
+          ctx.fillStyle = heatColor(v);
+          ctx.fillRect(gx * cellW, gy * cellH, cellW + 1, cellH + 1);
+        }
+      }
+
+      // route network edges
       ctx.strokeStyle = "rgba(148, 163, 184, 0.25)";
       ctx.lineWidth = 1;
       ctx.setLineDash([4, 4]);
-      for (let i = 0; i < LOCATION_ORDER.length - 1; i++) {
-        const a = LOCATIONS[LOCATION_ORDER[i]].pos;
-        const b = LOCATIONS[LOCATION_ORDER[i + 1]].pos;
+      for (const [fromId, toId] of MAP_ROUTE_EDGES) {
+        const a = LOCATIONS[fromId].pos;
+        const b = LOCATIONS[toId].pos;
         ctx.beginPath();
         ctx.moveTo(a.x * W, a.y * H);
         ctx.lineTo(b.x * W, b.y * H);
@@ -58,11 +75,10 @@ function useCanvasRenderer(canvasRef: React.RefObject<HTMLCanvasElement | null>)
       ctx.setLineDash([]);
 
       // agents
-      const agents = engine.agents;
       ctx.fillStyle = "rgba(56, 189, 248, 0.85)";
       for (let i = 0; i < agents.length; i++) {
         const a = agents[i];
-        if (a.status === "Exited") continue;
+        if (a.status === "Exited" || a.status === "Pending") continue;
         const x = a.pos.x * W;
         const y = a.pos.y * H;
         ctx.fillRect(x, y, 1.6, 1.6);
@@ -134,10 +150,17 @@ export function TwinMap() {
           17.4239° N · 79.3129° E
         </div>
         <div className="glass absolute bottom-3 right-3 flex items-center gap-3 rounded-lg px-3 py-2 text-[10px]">
-          {(["low", "medium", "high", "critical"] as const).map((k) => (
-            <div key={k} className="flex items-center gap-1.5 capitalize text-muted-foreground">
+          {(
+            [
+              { k: "low" as const, label: "Green" },
+              { k: "medium" as const, label: "Yellow" },
+              { k: "high" as const, label: "Orange" },
+              { k: "critical" as const, label: "Red" },
+            ] as const
+          ).map(({ k, label }) => (
+            <div key={k} className="flex items-center gap-1.5 text-muted-foreground">
               <span className={`h-2 w-2 rounded-full ${levelColor[k]}`} />
-              {k}
+              {label}
             </div>
           ))}
         </div>
