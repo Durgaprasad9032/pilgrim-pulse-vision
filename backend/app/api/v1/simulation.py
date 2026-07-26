@@ -1,19 +1,12 @@
 from fastapi import APIRouter
+from app.schemas.simulation_schema import SimulationStatusResponse
+from app.services.simulation_service import SimulationService
 
 router = APIRouter()
+simulation_service = SimulationService()
 
 
-@router.get("/status")
+@router.get("/status", response_model=SimulationStatusResponse)
 def get_simulation_status():
     """Retrieve current crowd simulation status."""
-    return {
-        "status": "running",
-        "simulation_id": "sim_8f93a102",
-        "active_agents": 15420,
-        "current_step": 1450,
-        "max_steps": 5000,
-        "time_elapsed_seconds": 290.5,
-        "density_level": "medium",
-        "chokepoints_active": 3,
-        "last_updated": "2026-07-25T17:20:00Z",
-    }
+    return simulation_service.get_simulation_status()

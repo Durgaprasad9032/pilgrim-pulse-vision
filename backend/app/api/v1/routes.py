@@ -1,31 +1,12 @@
 from fastapi import APIRouter
+from app.schemas.route_schema import RouteResponse
+from app.services.route_service import RouteService
 
 router = APIRouter()
+route_service = RouteService()
 
 
-@router.get("/")
-@router.get("")
+@router.get("/", response_model=RouteResponse)
 def get_routes():
     """Retrieve pilgrim pedestrian route statuses and diversion suggestions."""
-    return {
-        "routes": [
-            {
-                "route_id": "route_alpha",
-                "name": "Main Entry to Sanctum Direct Route",
-                "status": "CONGESTED",
-                "distance_meters": 450,
-                "estimated_walk_time_minutes": 25,
-                "congestion_score": 0.85,
-                "suggested_diversion": "route_beta",
-            },
-            {
-                "route_id": "route_beta",
-                "name": "North Ring Bypass Route",
-                "status": "CLEAR",
-                "distance_meters": 680,
-                "estimated_walk_time_minutes": 12,
-                "congestion_score": 0.25,
-                "suggested_diversion": None,
-            },
-        ]
-    }
+    return route_service.get_optimal_routes()
