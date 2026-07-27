@@ -7,6 +7,7 @@ import { TwinMap } from "@/components/dashboard/TwinMap";
 import { AlertsPanel } from "@/components/dashboard/AlertsPanel";
 import { ChartsRow } from "@/components/dashboard/Charts";
 import { ControlPanel } from "@/components/dashboard/ControlPanel";
+import { PredictionPanel } from "@/components/dashboard/PredictionPanel";
 import { CommandCenter } from "@/components/dashboard/CommandCenter";
 import { StatusBar } from "@/components/dashboard/StatusBar";
 import { Footer } from "@/components/dashboard/Footer";
@@ -105,6 +106,9 @@ function Dashboard() {
 
           {/* Control */}
           <ControlPanel />
+
+          {/* XGBoost AI Prediction Panel */}
+          <PredictionPanel />
 
           {/* Command Center */}
           <CommandCenter />

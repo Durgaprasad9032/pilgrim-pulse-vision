@@ -15,6 +15,8 @@ class PredictionZone(BaseModel):
     predicted_density_p_m2: float = Field(..., description="Predicted crowd density in persons per square meter")
     risk_level: str = Field(..., description="Assessed risk level for the zone")
     trend: str = Field(..., description="Crowd movement and density trend direction")
+    confidence_score: float = Field(0.95, description="AI model confidence score (0.0 to 1.0)")
+
 
 
 class PredictionResponse(BaseModel):

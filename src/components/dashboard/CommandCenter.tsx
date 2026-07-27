@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils";
 import { useSimulation } from "@/simulation/hooks";
 import type { AlertSeverity, RouteHealthStatus, SystemStatus } from "@/simulation/types";
 
+import { usePredictions } from "@/hooks/usePredictions";
+
 const statusTone: Record<SystemStatus, string> = {
   Normal: "bg-success/15 text-success border-success/30",
   Elevated: "bg-warning/15 text-warning border-warning/30",
@@ -42,8 +44,10 @@ function formatMin(sec: number) {
 
 export function CommandCenter() {
   const sim = useSimulation();
+  const { data: aiPredictions } = usePredictions();
   const cc = sim.intelligence.commandCenter;
   const intel = sim.intelligence;
+  const aiZones = aiPredictions?.zones ?? [];
 
   return (
     <motion.section
@@ -59,7 +63,7 @@ export function CommandCenter() {
           <div>
             <h3 className="text-sm font-semibold tracking-tight">Live Command Center</h3>
             <p className="text-[11px] text-muted-foreground">
-              Intelligent crowd management · confidence {intel.overallConfidence}
+              Intelligent crowd management · XGBoost model confidence {aiPredictions?.zones[0]?.confidence_score ? Math.round(aiPredictions.zones[0].confidence_score * 100) + "%" : intel.overallConfidence}
             </p>
           </div>
         </div>
@@ -77,21 +81,50 @@ export function CommandCenter() {
         {/* Predictions + route summary */}
         <div className="space-y-4">
           <div className="rounded-xl border border-border bg-secondary/30 p-4">
-            <div className="mb-3 flex items-center gap-2">
-              <Brain className="h-4 w-4 text-primary" />
-              <h4 className="text-xs font-semibold uppercase tracking-wider">Crowd Predictions</h4>
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Brain className="h-4 w-4 text-primary" />
+                <h4 className="text-xs font-semibold uppercase tracking-wider">XGBoost Predictions</h4>
+              </div>
+              <span className="text-[10px] font-bold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-1.5 py-0.5 rounded-full">
+                AI Live
+              </span>
             </div>
             <ul className="space-y-2">
-              {intel.predictions.map((p) => (
-                <li
-                  key={p.horizonMinutes}
-                  className="flex items-center justify-between rounded-lg bg-background/50 px-3 py-2 text-xs"
-                >
-                  <span className="text-muted-foreground">+{p.horizonMinutes} min</span>
-                  <span className="font-medium">{p.expectedCrowd.toLocaleString()} crowd</span>
-                  <span className="text-muted-foreground">{p.expectedCongestion}% congestion</span>
-                </li>
-              ))}
+              {aiZones.length > 0
+                ? aiZones.map((z) => (
+                    <li
+                      key={z.zone_id || z.zone_name}
+                      className="flex items-center justify-between rounded-lg bg-background/50 px-2.5 py-1.5 text-xs"
+                    >
+                      <span className="font-medium truncate max-w-[110px]">{z.zone_name}</span>
+                      <span className="text-muted-foreground">{z.predicted_density_p_m2.toFixed(2)} p/m²</span>
+                      <span
+                        className={cn(
+                          "px-1.5 py-0.5 text-[10px] font-bold rounded border uppercase",
+                          z.risk_level === "CRITICAL"
+                            ? "bg-rose-500/15 text-rose-400 border-rose-500/30"
+                            : z.risk_level === "HIGH"
+                            ? "bg-orange-500/15 text-orange-400 border-orange-500/30"
+                            : z.risk_level === "MODERATE"
+                            ? "bg-amber-500/15 text-amber-400 border-amber-500/30"
+                            : "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+                        )}
+                      >
+                        {z.risk_level}
+                      </span>
+                    </li>
+                  ))
+                : intel.predictions.map((p) => (
+                    <li
+                      key={p.horizonMinutes}
+                      className="flex items-center justify-between rounded-lg bg-background/50 px-3 py-2 text-xs"
+                    >
+                      <span className="text-muted-foreground">+{p.horizonMinutes} min</span>
+                      <span className="font-medium">{p.expectedCrowd.toLocaleString()} crowd</span>
+                      <span className="text-muted-foreground">{p.expectedCongestion}% congestion</span>
+                    </li>
+                  ))}
             </ul>
           </div>
 
